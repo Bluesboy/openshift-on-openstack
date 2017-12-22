@@ -5,6 +5,21 @@ description: >
 
 parameters:
 
+  # Existent Openstack netork and subnet
+  fixed_network:
+    description: >
+      The name or ID of the admin and public network
+    type: string
+    constraints:
+    - custom_constraint: neutron.network
+
+  fixed_subnet:
+    description: >
+      The name or ID of the admin and public IPv4 space
+    type: string
+    constraints:
+    - custom_constraint: neutron.subnet
+
   # What version of OpenShift Container Platform to install
   # This value is used to select the RPM repo for the OCP release to install
   ocp_version:
@@ -507,29 +522,6 @@ parameters:
 
 resources:
 
-  # Network Components
-  fixed_network:
-    type: OS::Neutron::Net
-
-  fixed_subnet:
-    type: OS::Neutron::Subnet
-    properties:
-      cidr: {get_param: internal_subnet}
-      network: {get_resource: fixed_network}
-      dns_nameservers: {get_param: dns_nameserver}
-
-  external_router:
-    type: OS::Neutron::Router
-    properties:
-      external_gateway_info:
-        network: {get_param: external_network}
-
-  external_router_interface:
-    type: OS::Neutron::RouterInterface
-    properties:
-      router_id: {get_resource: external_router}
-      subnet: {get_resource: fixed_subnet}
-
   cluster_network:
     type: OS::Neutron::Net
 
@@ -548,17 +540,16 @@ resources:
       volume_id: {get_param: registry_volume_id}
 
   ipfailover:
-    depends_on: external_router_interface
     type: OOShift::IPFailover
     properties:
-      fixed_network: {get_resource: fixed_network}
-      fixed_subnet: {get_resource: fixed_subnet}
+      fixed_network: {get_param: fixed_network}
+      fixed_subnet: {get_param: fixed_subnet}
       external_network: {get_param: external_network}
       loadbalancer_ip: {get_attr: [lb_floating_ip, floating_ip_address]}
 
   # VM Host definitions
   bastion_host:
-    depends_on: [external_router_interface, fixed_network, fixed_subnet, registry_volume]
+    depends_on: registry_volume
     type: bastion.yaml
     properties:
       node_count: {get_param: node_count}
@@ -583,8 +574,8 @@ resources:
             '%stackname%': {get_param: 'OS::stack_name'}
             '%hostname%': {get_param: bastion_hostname}
       domain_name: {get_param: domain_name}
-      fixed_network: {get_resource: fixed_network}
-      fixed_subnet: {get_resource: fixed_subnet}
+      fixed_network: {get_param: fixed_network}
+      fixed_subnet: {get_param: fixed_subnet}
       ansible_public_key: {get_attr: [ansible_keys, public_key]}
       ansible_private_key: {get_attr: [ansible_keys, private_key]}
       floating_ip: {get_attr: [bastion_floating_ip, floating_ip_address]}
@@ -598,7 +589,6 @@ resources:
       ca_cert: {get_param: ca_cert}
 
   openshift_masters:
-    depends_on: [external_router_interface, fixed_network, fixed_subnet]
     type: OS::Heat::ResourceGroup
     properties:
       count: {get_param: master_count}
@@ -627,8 +617,8 @@ resources:
           domain_name: {get_param: domain_name}
           ansible_public_key: {get_attr: [ansible_keys, public_key]}
           bastion_node: {get_attr: [bastion_host, resource.host]}
-          fixed_network: {get_resource: fixed_network}
-          fixed_subnet: {get_resource: fixed_subnet}
+          fixed_network: {get_param: fixed_network}
+          fixed_subnet: {get_param: fixed_subnet}
           internal_network: {get_resource: cluster_network}
           internal_subnet: {get_resource: cluster_subnet}
           external_network: {get_param: external_network}
@@ -642,7 +632,6 @@ resources:
           ca_cert: {get_param: ca_cert}
 
   openshift_infra_nodes:
-    depends_on: [external_router_interface, fixed_network, fixed_subnet]
     type: OS::Heat::ResourceGroup
     properties:
       count: {get_param: infra_count}
@@ -671,8 +660,8 @@ resources:
           domain_name: {get_param: domain_name}
           ansible_public_key: {get_attr: [ansible_keys, public_key]}
           bastion_node: {get_attr: [bastion_host, resource.host]}
-          fixed_network: {get_resource: fixed_network}
-          fixed_subnet: {get_resource: fixed_subnet}
+          fixed_network: {get_param: fixed_network}
+          fixed_subnet: {get_param: fixed_subnet}
           internal_network: {get_resource: cluster_network}
           internal_subnet: {get_resource: cluster_subnet}
           external_network: {get_param: external_network}
@@ -687,7 +676,6 @@ resources:
           ca_cert: {get_param: ca_cert}
 
   openshift_nodes:
-    depends_on: [external_router_interface, fixed_network, fixed_subnet]
     type: OS::Heat::AutoScalingGroup
     properties:
       desired_capacity: {get_param: node_count}
@@ -703,8 +691,8 @@ resources:
           flavor: {get_param: node_flavor}
           key_name: {get_param: ssh_key_name}
           ssh_user: {get_param: ssh_user}
-          fixed_network: {get_resource: fixed_network}
-          fixed_subnet: {get_resource: fixed_subnet}
+          fixed_network: {get_param: fixed_network}
+          fixed_subnet: {get_param: fixed_subnet}
           internal_network: {get_resource: cluster_network}
           internal_subnet: {get_resource: cluster_subnet}
           security_group: {get_resource: node_security_group}
@@ -844,9 +832,9 @@ resources:
     properties:
       security_groups:
       - {get_resource: bastion_security_group}
-      network: {get_resource: fixed_network}
+      network: {get_param: fixed_network}
       fixed_ips:
-      - subnet: {get_resource: fixed_subnet}
+      - subnet: {get_param: fixed_subnet}
       replacement_policy: AUTO
 
   bastion_security_group:
@@ -1011,13 +999,12 @@ resources:
       app_subdomain: {get_param: app_subdomain}
       stack_name: {get_param: 'OS::stack_name'}
       ansible_public_key: {get_attr: [ansible_keys, public_key]}
-      fixed_subnet: {get_resource: fixed_subnet}
       members: {get_attr: [openshift_masters, host]}
       master_hostname: {get_attr: [openshift_masters, resource.0.hostname]}
       floatingip_id: {get_resource: lb_floating_ip}
       floatingip: {get_attr: [lb_floating_ip, floating_ip_address]}
-      fixed_network: {get_resource: fixed_network}
-      fixed_subnet: {get_resource: fixed_subnet}
+      fixed_network: {get_param: fixed_network}
+      fixed_subnet: {get_param: fixed_subnet}
       extra_repository_urls: {get_param: extra_repository_urls}
       extra_docker_repository_urls: {get_param: extra_docker_repository_urls}
       stack_name: {get_param: 'OS::stack_name'}
