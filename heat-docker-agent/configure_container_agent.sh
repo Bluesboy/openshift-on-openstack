@@ -3,7 +3,7 @@
 set -eux
 
 yum update -y && yum clean all
-yum -y install centos-release-openstack-liberty
+yum -y install centos-release-openstack-ocata
 yum install -y net-tools bind-utils git python-pip \
   sysvinit-tools openstack-heat-templates \
   os-collect-config os-apply-config \

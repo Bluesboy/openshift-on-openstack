@@ -18,8 +18,8 @@ if ! yum info os-collect-config; then
             subscription-manager repos --enable="rhel-7-server-openstack-$OSP_VERSION-director-rpms"
         fi
     else
-        yum -y install centos-release-openstack-liberty
+        yum -y install centos-release-openstack-ocata
     fi
 fi
-yum -y install os-collect-config python-zaqarclient os-refresh-config os-apply-config openstack-heat-templates python-oslo-log python-psutil
+yum -y install os-collect-config python-zaqarclient os-refresh-config os-apply-config openstack-heat-templates python-oslo-log python-psutil ftp://mirror.switch.ch/pool/4/mirror/centos/7.4.1708/cloud/x86_64/openstack-newton/openstack-heat-templates-0-0.5.1e6015dgit.el7.noarch.rpm
 #yum-config-manager --disable 'epel*'
