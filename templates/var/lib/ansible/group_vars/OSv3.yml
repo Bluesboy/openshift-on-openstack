@@ -11,7 +11,7 @@ openshift_override_hostname_check: true
 openshift_use_openshift_sdn: {{openshift_use_openshift_sdn}}
 openshift_use_flannel: {{openshift_use_flannel}}
 flannel_interface: eth1
-openshift_use_dnsmasq: false
+openshift_use_dnsmasq: true
 {{#master_ha}}
 openshift_master_cluster_password: openshift_cluster
 openshift_master_cluster_method: native
