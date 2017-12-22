@@ -23,6 +23,8 @@ ifup eth1
 sudo_set_secure_path "/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin"
 sudo_enable_from_ssh
 
+network_manager_install_and_enable
+
 docker_install_and_enable
 docker_set_trusted_registry 0.0.0.0/0
 
@@ -40,5 +42,7 @@ if [ -n "$VOLUME_ID" ]
 then
     docker_set_storage_device $VOLUME_ID
 fi
+
+systemctl start docker
 
 notify_success "OpenShift node has been prepared for running docker."

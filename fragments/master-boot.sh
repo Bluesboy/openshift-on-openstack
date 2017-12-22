@@ -27,6 +27,8 @@ ifup eth1
 sudo_set_secure_path "/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin"
 sudo_enable_from_ssh
 
+network_manager_install_and_enable
+
 docker_install_and_enable
 docker_set_trusted_registry 0.0.0.0/0
 
@@ -43,5 +45,7 @@ systemctl enable lvm2-lvmetad
 systemctl start lvm2-lvmetad
 
 /usr/bin/docker-storage-setup || notify_failure "Docker Storage setup failed"
+
+systemctl start docker
 
 notify_success "OpenShift node has been prepared for running docker."

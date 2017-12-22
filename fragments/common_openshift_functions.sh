@@ -31,6 +31,14 @@ function docker_set_trusted_registry() {
     echo "INSECURE_REGISTRY='--insecure-registry $1'" >> /etc/sysconfig/docker
 }
 
+function network_manager_install_and_enable() {
+    if ! rpm -q NetworkManager
+    then
+        retry yum -y install NetworkManager || notify_failure "could not install NetworkManager"
+    fi
+    systemctl enable NetworkManager && systemctl start NetworkManager
+}
+
 #
 # - systemd ---------------------------------------------------------
 #
